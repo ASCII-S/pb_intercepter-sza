@@ -14,12 +14,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <cstddef> // For size_t
 using namespace std;
 
 KNOB<UINT64> randInst(KNOB_MODE_WRITEONCE, "pintool",
                       "randinst","0", "random instructions");
 
-static UINT64 allinst = 0;
+static UINT64 allinst = 0 ;
+static UINT32 find_flag = 0;
+
+#define Target_Opecode "MOV"
+static UINT64 start_dec_adr = 4198496;
+static UINT64 end_dec_adr = 4314860;
+
 
 //mflag = 1;  表示ins是内存基址或内存索引寄存器
 //mflag = -1; 表示ins是无效内存
@@ -27,8 +34,18 @@ static UINT64 allinst = 0;
 
 //ip是每次遇到的指令,regname是在指令ins中随机找到的寄存器名称,mflag表示寄存器的状态
 VOID docount(VOID *ip, VOID *reg_name,UINT32 mflag) {
-    allinst++;
-    if (randInst.Value() == allinst){   //遇到参数中给定的随机数时执行下文
+    //allinst++;
+    if (randInst.Value() <= allinst && find_flag ==0) {   //遇到参数中给定的随机数时执行下文;在randInst之后开始找第一个期望的操作码
+        /*
+        cout << "\ndocount in:" << endl;
+        cout << "randInst:" << randInst.Value() << endl;
+        cout << "actual Inst:" << allinst << endl;
+        cout << "pc:\t" << std::hex << ip << dec << endl;
+            */
+
+        find_flag = 1;
+        if (((unsigned long)ip > start_dec_adr) && ((unsigned long)ip < end_dec_adr)){  //符合预期的ip值
+        //cout << "Find hexpc:\t" << std::dec << ip << dec << endl;
         ofstream OutFile;
         OutFile.open("instruction");
         if (mflag == 1){
@@ -42,6 +59,11 @@ VOID docount(VOID *ip, VOID *reg_name,UINT32 mflag) {
         }
         OutFile << "pc:"<<(unsigned long)ip << endl;
         OutFile.close();
+
+        }
+        else{
+            find_flag = 0;
+        }
     }
 }
 // Pin calls this function every time a new instruction is encountered
@@ -50,13 +72,30 @@ VOID CountInst(INS ins, VOID *v)
     //allinst++;
     //cout << "Current is" << allinst << endl;
 
-
-
         int mflag = 0;
         REG reg;
         const char * reg_name = NULL;
-        if (INS_IsMemoryWrite(ins) || INS_IsMemoryRead(ins)) {
-            REG reg = INS_MemoryBaseReg(ins);//获取给定指令的内存基址寄存器
+
+        // 获取操作码
+        OPCODE opcode = INS_Opcode(ins);
+        std::string opcodeStr = OPCODE_StringShort(opcode);
+        const char *target_ope = Target_Opecode;
+
+//------------------------------------------------------全局if,不是目标操作码就啥也不做--------------------------------------------------------//
+        allinst++;
+        //strncmp(opcodeStr.c_str(), target_ope, target_len) == 0
+    if (opcodeStr == target_ope && find_flag ==0 && randInst.Value() <= allinst) { //只考虑目标操作码,考虑第一次命中,从随机数开始考虑
+        /*
+        std::cout << "\n\nFound JNE instruction: " << opcodeStr << std::endl;  // 如果前几项字符匹配
+        // 使用 strncmp 比较 opcodeStr 的前 target_len 个字符
+        cout << "Inj ope:\t" << opcodeStr.c_str() << "\tInj ins:\t" <<  INS_Disassemble(ins)<<endl;
+        cout << "Target ope:\t" << target_ope << endl;
+        cout << "Now Inst:\t" << allinst << endl;
+        */
+
+
+        if (INS_IsMemoryWrite(ins) || INS_IsMemoryRead(ins)) {//内存读写指令
+            REG reg = INS_MemoryBaseReg(ins);//获取当前指令的内存基址寄存器
             string *temp = new string(REG_StringShort(reg));
             reg_name = temp->c_str();
 
@@ -64,7 +103,7 @@ VOID CountInst(INS ins, VOID *v)
                 reg = INS_MemoryIndexReg(ins);//获取给定指令的内存索引寄存器
                 string *temp = new string(REG_StringShort(reg));
                 reg_name = temp->c_str();
-                //OutFile <<"mem:" + REG_StringShort(reg) << endl;
+                //OutFile <<"mem:" + REG_StringShort(reg) << endl;//不要打开这些OutFile,除非你仅调试这个工具
             }
             mflag = 1;  //表示ins是内存基址或内存索引寄存器
         }
@@ -103,6 +142,9 @@ VOID CountInst(INS ins, VOID *v)
         //    OutFile<<"next:"<<INS_Address(INS_Next(ins)) << endl;
         //OutFile.close();
         INS_InsertCall(ins,IPOINT_BEFORE,(AFUNPTR)docount,IARG_INST_PTR,IARG_PTR,reg_name,IARG_UINT32,mflag,IARG_END);
+
+        }
+//------------------------------------------------------以上全局if,不是目标操作码就啥也不做--------------------------------------------------------//
     //cout<<"pc:"<<INS_Address(ins) << " " << allinst<< endl;
 }
 
