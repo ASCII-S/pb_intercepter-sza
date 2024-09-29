@@ -31,7 +31,6 @@ VOID CountInst(INS ins, VOID *v)
 
     stringstream ss;
     ss << INS_Address(ins);
-    print("findnextpc try to generate nextpc")
     if (pc.Value() == ss.str()){
         ofstream OutFile;
         OutFile.open("nextpc");
