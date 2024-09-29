@@ -64,7 +64,7 @@ VOID CountInst(INS ins, VOID *v)
                 reg = INS_MemoryIndexReg(ins);//获取给定指令的内存索引寄存器
                 string *temp = new string(REG_StringShort(reg));
                 reg_name = temp->c_str();
-                OutFile <<"mem:" + REG_StringShort(reg) << endl;
+                //OutFile <<"mem:" + REG_StringShort(reg) << endl;
             }
             mflag = 1;  //表示ins是内存基址或内存索引寄存器
         }
@@ -85,19 +85,19 @@ VOID CountInst(INS ins, VOID *v)
             if (!REG_valid(reg)) {
                 string *temp = new string( "REGNOTVALID: inst " + INS_Disassemble(ins));
                 reg_name = temp->c_str();
-                OutFile << "REGNOTVALID: inst " + INS_Disassemble(ins) << endl;
+                //OutFile << "REGNOTVALID: inst " + INS_Disassemble(ins) << endl;
                 mflag = -1;
             }
             if (reg == REG_RFLAGS || reg == REG_FLAGS || reg == REG_EFLAGS) {
                 string *temp = new string( "REGNOTVALID: inst " + INS_Disassemble(ins));
                 reg_name = temp->c_str();
                 mflag = -1;
-                OutFile << "REGNOTVALID: inst " + INS_Disassemble(ins) << endl;
+                //OutFile << "REGNOTVALID: inst " + INS_Disassemble(ins) << endl;
             }
 
             string *temp = new string(REG_StringShort(reg));
             reg_name = temp->c_str();
-            OutFile << "reg:" + REG_StringShort(reg) << endl;
+            //OutFile << "reg:" + REG_StringShort(reg) << endl;
         }
         //if (INS_Valid(INS_Next(ins)))
         //    OutFile<<"next:"<<INS_Address(INS_Next(ins)) << endl;
